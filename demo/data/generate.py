@@ -262,12 +262,12 @@ class DataGenerator:
         actual = df.columns.tolist()
 
         if set(expected) != set(actual):
-            print(f"❌ Schema validation failed for {entity}", file=sys.stderr)
+            print(f"[ERROR] Schema validation failed for {entity}", file=sys.stderr)
             print(f"   Expected: {expected}", file=sys.stderr)
             print(f"   Actual: {actual}", file=sys.stderr)
             return False
 
-        print(f"✓ Schema validated for {entity}")
+        print(f"[OK] Schema validated for {entity}")
         return True
 
     def save_data(
@@ -279,12 +279,12 @@ class DataGenerator:
         if format == "csv":
             output_file = output_dir / f"{entity}.csv"
             df.to_csv(output_file, index=False)
-            print(f"✓ Saved {output_file} ({len(df)} rows)")
+            print(f"[OK] Saved {output_file} ({len(df)} rows)")
 
         elif format == "parquet":
             output_file = output_dir / f"{entity}.parquet"
             df.to_parquet(output_file, index=False, compression="zstd")
-            print(f"✓ Saved {output_file} ({len(df)} rows)")
+            print(f"[OK] Saved {output_file} ({len(df)} rows)")
 
         elif format == "jsonl":
             output_file = output_dir / f"{entity}.jsonl"
@@ -297,7 +297,7 @@ class DataGenerator:
                         elif isinstance(value, pd.Timestamp):
                             record[key] = value.isoformat()
                     f.write(json.dumps(record) + "\n")
-            print(f"✓ Saved {output_file} ({len(df)} rows)")
+            print(f"[OK] Saved {output_file} ({len(df)} rows)")
 
         else:
             raise ValueError(f"Unsupported format: {format}")
@@ -390,7 +390,7 @@ def main():
     for status, count in orders_df["status"].value_counts().items():
         print(f"    {status}: {count:,} ({count/len(orders_df)*100:.1f}%)")
 
-    print(f"\n✓ Data generation complete!\n")
+    print(f"\n[SUCCESS] Data generation complete!\n")
 
 
 if __name__ == "__main__":

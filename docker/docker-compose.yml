@@ -30,7 +30,7 @@ services:
   # ==========================================================================
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.0
+    image: confluentinc/cp-zookeeper:7.8.3
     container_name: zookeeper
     hostname: zookeeper
     networks:
@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
 
   kafka:
-    image: confluentinc/cp-kafka:7.6.0
+    image: confluentinc/cp-kafka:7.8.3
     container_name: kafka
     hostname: kafka
     networks:
@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:7.6.0
+    image: confluentinc/cp-schema-registry:7.8.3
     container_name: schema-registry
     hostname: schema-registry
     networks:
@@ -114,7 +114,7 @@ services:
   # ==========================================================================
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17.7-bookworm
     container_name: postgres
     hostname: postgres
     networks:
@@ -135,7 +135,7 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: minio
     hostname: minio
     networks:
@@ -158,7 +158,7 @@ services:
     restart: unless-stopped
 
   minio-setup:
-    image: minio/mc:RELEASE.2024-01-13T08-44-48Z
+    image: minio/mc:latest
     container_name: minio-setup
     networks:
       - backend
@@ -195,7 +195,7 @@ services:
   # ==========================================================================
 
   nifi-1:
-    image: apache/nifi:2.0.0-M1
+    image: apache/nifi:2.7.2
     container_name: nifi-1
     hostname: nifi-1
     networks:
@@ -206,11 +206,7 @@ services:
     environment:
       NIFI_WEB_HTTP_HOST: nifi-1
       NIFI_WEB_HTTP_PORT: 8443
-      NIFI_CLUSTER_IS_NODE: "true"
-      NIFI_CLUSTER_NODE_PROTOCOL_PORT: 9998
-      NIFI_CLUSTER_LOAD_BALANCE_PORT: 6342
-      NIFI_ZK_CONNECT_STRING: zookeeper:2181
-      NIFI_ELECTION_MAX_WAIT: 1 min
+      NIFI_CLUSTER_IS_NODE: "false"
       NIFI_SENSITIVE_PROPS_KEY: nifidemosecretkey
       SINGLE_USER_CREDENTIALS_USERNAME: ${SINGLE_USER_CREDENTIALS_USERNAME:-nifi}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${SINGLE_USER_CREDENTIALS_PASSWORD:-changeme123}
@@ -228,7 +224,7 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "http://localhost:8443/nifi-api/system-diagnostics"]
+      test: ["CMD", "curl", "-k", "-f", "https://nifi-1:8443/nifi"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -236,7 +232,7 @@ services:
     restart: unless-stopped
 
   nifi-2:
-    image: apache/nifi:2.0.0-M1
+    image: apache/nifi:2.7.2
     container_name: nifi-2
     hostname: nifi-2
     networks:
@@ -266,7 +262,7 @@ services:
       nifi-1:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "http://localhost:8443/nifi-api/system-diagnostics"]
+      test: ["CMD", "curl", "-k", "-f", "https://nifi-1:8443/nifi"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -276,7 +272,7 @@ services:
       - full
 
   nifi-3:
-    image: apache/nifi:2.0.0-M1
+    image: apache/nifi:2.7.2
     container_name: nifi-3
     hostname: nifi-3
     networks:
@@ -306,7 +302,7 @@ services:
       nifi-1:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "http://localhost:8443/nifi-api/system-diagnostics"]
+      test: ["CMD", "curl", "-k", "-f", "https://nifi-1:8443/nifi"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -377,7 +373,7 @@ services:
   # ==========================================================================
 
   trino:
-    image: trinodb/trino:435
+    image: trinodb/trino:465
     container_name: trino
     hostname: trino
     networks:
@@ -408,7 +404,7 @@ services:
   # ==========================================================================
 
   superset:
-    image: apache/superset:3.0.3
+    image: apache/superset:4.0.2
     container_name: superset
     hostname: superset
     networks:
