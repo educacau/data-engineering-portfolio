@@ -1,0 +1,40 @@
+# Code Owners for Data Engineering Portfolio
+#
+# These owners will be automatically requested for review when someone
+# opens a pull request that modifies files in the specified paths.
+#
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global ownership (all files)
+* @eduar
+
+# Documentation
+/docs/ @eduar
+*.md @eduar
+
+# Planning documents
+/planning/ @eduar
+
+# Demo and data generation
+/demo/ @eduar
+/demo/data/ @eduar
+
+# Docker and infrastructure
+/docker/ @eduar
+docker-compose*.yml @eduar
+.env.example @eduar
+
+# Scripts
+/scripts/ @eduar
+*.sh @eduar
+
+# Tests
+/tests/ @eduar
+
+# CI/CD workflows
+/.github/workflows/ @eduar
+
+# Configuration files
+/.github/ @eduar
+.gitignore @eduar
+.pre-commit-config.yaml @eduar
