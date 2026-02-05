@@ -13,31 +13,25 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <!--
   Hybrid Configuration: Git + Database
   - Git: Flow versioning and version control
   - Database: Metadata, buckets, and permissions
 -->
-
 <providers>
-
-    <!-- Git Flow Persistence Provider -->
-    <!-- Stores flow snapshots in a Git repository -->
-    <flowPersistenceProvider>
-        <class>org.apache.nifi.registry.provider.flow.git.GitFlowPersistenceProvider</class>
-        <property name="Flow Storage Directory">/opt/nifi-registry/flow-storage</property>
-        <property name="Remote To Push">origin</property>
-        <property name="Remote Access User"></property>
-        <property name="Remote Access Password"></property>
-        <property name="Remote Clone Repository"></property>
-    </flowPersistenceProvider>
-
-    <!-- File System Extension Bundle Persistence Provider -->
-    <!-- Stores extension bundles (NARs) in the file system -->
-    <extensionBundleProvider>
-        <class>org.apache.nifi.registry.provider.extension.FileSystemBundlePersistenceProvider</class>
-        <property name="Extension Bundle Storage Directory">/opt/nifi-registry/extension-bundles</property>
-    </extensionBundleProvider>
-
+  <!-- Git Flow Persistence Provider -->
+  <!-- Stores flow snapshots in a Git repository -->
+  <flowPersistenceProvider>
+    <class>org.apache.nifi.registry.provider.flow.git.GitFlowPersistenceProvider</class>
+    <property name="Flow Storage Directory">/opt/nifi-registry/flow-storage</property>
+    <property name="Remote To Push"></property>
+    <property name="Remote Access User"></property>
+    <property name="Remote Access Password"></property>
+  </flowPersistenceProvider>
+  <!-- File System Extension Bundle Persistence Provider -->
+  <!-- Stores extension bundles (NARs) in the file system -->
+  <extensionBundlePersistenceProvider>
+    <class>org.apache.nifi.registry.provider.extension.FileSystemBundlePersistenceProvider</class>
+    <property name="Extension Bundle Storage Directory">/opt/nifi-registry/extension-bundles</property>
+  </extensionBundlePersistenceProvider>
 </providers>
