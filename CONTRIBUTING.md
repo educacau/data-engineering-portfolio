@@ -6,12 +6,108 @@ Thank you for your interest in contributing to this project! This document provi
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/your-username/portfolio-enhancement.git`
-3. Create a feature branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Test thoroughly
-6. Commit with clear messages
-7. Push to your fork
-8. Open a Pull Request
+3. Install Git hooks: `./scripts/install-hooks.sh`
+4. Create a feature branch: `git checkout -b feature/your-feature-name`
+5. Make your changes
+6. Test thoroughly
+7. Commit with clear messages
+8. Push to your fork
+9. Open a Pull Request
+
+## Gitflow Workflow
+
+**⚠️ IMPORTANT: Direct commits to `main` and `develop` branches are blocked!**
+
+This project follows the **Gitflow workflow** to maintain code quality and organized development.
+
+### Protected Branches
+
+- **`main`**: Production-ready code only (releases)
+- **`develop`**: Main development branch (integration)
+
+🔒 **Git hooks enforce this locally** - commits to these branches will be rejected.
+
+### Branch Naming Conventions
+
+| Branch Type | Naming | Purpose | Example |
+|------------|---------|---------|---------|
+| **Feature** | `feature/*` | New features | `feature/add-kafka-metrics` |
+| **Fix** | `fix/*` | Bug fixes | `fix/docker-memory-leak` |
+| **Hotfix** | `hotfix/*` | Production fixes | `hotfix/critical-security-patch` |
+| **Release** | `release/*` | Release preparation | `release/v1.0.0` |
+
+### Workflow Steps
+
+#### For New Features:
+
+```bash
+# 1. Start from develop
+git checkout develop
+git pull origin develop
+
+# 2. Create feature branch
+git checkout -b feature/your-feature-name
+
+# 3. Make changes and commit
+git add .
+git commit -m "feat: add your feature"
+
+# 4. Merge back to develop
+git checkout develop
+git merge feature/your-feature-name --no-ff
+
+# 5. Clean up
+git branch -d feature/your-feature-name
+
+# 6. Push to remote
+git push origin develop
+```
+
+#### For Bug Fixes:
+
+Same as features, but use `fix/bug-name` as branch name.
+
+#### For Hotfixes (Production):
+
+```bash
+# 1. Start from main
+git checkout main
+git checkout -b hotfix/issue-name
+
+# 2. Fix and commit
+git add .
+git commit -m "hotfix: fix critical issue"
+
+# 3. Merge to both main AND develop
+git checkout main
+git merge hotfix/issue-name --no-ff
+git checkout develop
+git merge hotfix/issue-name --no-ff
+
+# 4. Clean up
+git branch -d hotfix/issue-name
+```
+
+### Installing Git Hooks
+
+Git hooks are installed automatically when you run:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+This installs:
+- **pre-commit**: Blocks direct commits to `main` and `develop`
+
+### Bypassing Hooks (Not Recommended)
+
+If you absolutely must bypass the hooks (e.g., during repository setup):
+
+```bash
+git commit --no-verify
+```
+
+⚠️ **Warning**: Only use this if you know what you're doing!
 
 ## Development Setup
 
