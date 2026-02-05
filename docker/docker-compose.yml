@@ -333,7 +333,7 @@ services:
       NIFI_REGISTRY_DB_CLASS: org.postgresql.Driver
       NIFI_REGISTRY_DB_DRIVER_DIRECTORY: /opt/nifi-registry/nifi-registry-current/ext
       NIFI_REGISTRY_DB_USER: ${POSTGRES_USER:-iceberg}
-      NIFI_REGISTRY_DB_PASSWORD: ${POSTGRES_PASSWORD:-iceberg123}
+      NIFI_REGISTRY_DB_PASS: ${POSTGRES_PASSWORD:-iceberg123}
       NIFI_REGISTRY_FLOW_PROVIDER: database
     volumes:
       - nifi_registry_database:/opt/nifi-registry/nifi-registry-current/database
