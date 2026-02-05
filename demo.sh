@@ -61,9 +61,9 @@ print_banner() {
     cat << "EOF"
 ╔══════════════════════════════════════════════════════════════════╗
 ║                                                                  ║
-║        Apache NiFi Data Lakehouse - Demo Mode                   ║
+║        Apache NiFi Data Lakehouse - Demo Mode                    ║
 ║                                                                  ║
-║   Production-grade data platform with < 5min startup            ║
+║   Production-grade data platform with < 5min startup             ║
 ║                                                                  ║
 ╚══════════════════════════════════════════════════════════════════╝
 EOF
@@ -256,7 +256,7 @@ wait_for_health() {
     log_info "Waiting for services to become healthy (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
 
     local services=(
-        "http://localhost:8443/nifi-api/system-diagnostics|NiFi"
+        "https://localhost:8443/nifi-api/system-diagnostics|NiFi"
         "http://localhost:8088/health|Superset"
         "http://localhost:8080/v1/info|Trino"
         "http://localhost:9000/minio/health/live|MinIO"
