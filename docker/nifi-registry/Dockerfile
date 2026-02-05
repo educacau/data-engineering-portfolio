@@ -17,10 +17,32 @@ RUN curl -L -o /opt/nifi-registry/nifi-registry-current/lib/postgresql-42.7.1.ja
     chown nifi:nifi /opt/nifi-registry/nifi-registry-current/lib/postgresql-42.7.1.jar && \
     chmod 644 /opt/nifi-registry/nifi-registry-current/lib/postgresql-42.7.1.jar
 
-# Create flow storage directory
+# Create flow storage and extension bundle directories
 # Git repository will be initialized automatically by NiFi Registry on first use
 RUN mkdir -p /opt/nifi-registry/flow-storage && \
-    chown -R nifi:nifi /opt/nifi-registry/flow-storage
+    mkdir -p /opt/nifi-registry/extension-bundles && \
+    chown -R nifi:nifi /opt/nifi-registry/flow-storage && \
+    chown -R nifi:nifi /opt/nifi-registry/extension-bundles
+
+# Create providers.xml with Git+Database hybrid configuration
+RUN cat > /opt/nifi-registry/nifi-registry-current/conf/providers.xml <<'PROVIDERS_EOF'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<providers>
+  <flowPersistenceProvider>
+    <class>org.apache.nifi.registry.provider.flow.git.GitFlowPersistenceProvider</class>
+    <property name="Flow Storage Directory">/opt/nifi-registry/flow-storage</property>
+    <property name="Remote To Push"></property>
+    <property name="Remote Access User"></property>
+    <property name="Remote Access Password"></property>
+  </flowPersistenceProvider>
+  <extensionBundlePersistenceProvider>
+    <class>org.apache.nifi.registry.provider.extension.FileSystemBundlePersistenceProvider</class>
+    <property name="Extension Bundle Storage Directory">/opt/nifi-registry/extension-bundles</property>
+  </extensionBundlePersistenceProvider>
+</providers>
+PROVIDERS_EOF
+
+RUN chown nifi:nifi /opt/nifi-registry/nifi-registry-current/conf/providers.xml
 
 # Switch back to nifi user
 USER nifi

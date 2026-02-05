@@ -24,9 +24,9 @@
   <flowPersistenceProvider>
     <class>org.apache.nifi.registry.provider.flow.git.GitFlowPersistenceProvider</class>
     <property name="Flow Storage Directory">/opt/nifi-registry/flow-storage</property>
-    <property name="Remote To Push"></property>
-    <property name="Remote Access User"></property>
-    <property name="Remote Access Password"></property>
+    <property name="Remote To Push"/>
+    <property name="Remote Access User"/>
+    <property name="Remote Access Password"/>
   </flowPersistenceProvider>
   <!-- File System Extension Bundle Persistence Provider -->
   <!-- Stores extension bundles (NARs) in the file system -->
