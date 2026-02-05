@@ -7,7 +7,7 @@
 
 > **Modern data lakehouse** combining Apache NiFi, Kafka, Spark, Iceberg, and Trino for **real-time analytics at scale**. Complete observability, one-command deployment, production-ready architecture.
 
-[**🎬 Live Demo**](#quick-demo) · [**📐 Architecture**](#architecture) · [**📊 Benchmarks**](docs/performance.md) · [**📚 Documentation**](#documentation)
+[**🎬 Live Demo**](#-quick-demo) · [**📐 Architecture**](#️-architecture) · [**📊 Benchmarks**](docs/performance.md) · [**📚 Documentation**](#-documentation)
 
 ---
 
