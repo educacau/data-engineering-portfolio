@@ -315,7 +315,10 @@ services:
       - full
 
   nifi-registry:
-    image: apache/nifi-registry:2.7.2
+    build:
+      context: ./nifi-registry
+      dockerfile: Dockerfile
+    image: nifi-registry:2.7.2-postgresql
     container_name: nifi-registry
     hostname: nifi-registry
     networks:
