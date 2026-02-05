@@ -204,8 +204,8 @@ services:
     ports:
       - "8443:8443"
     environment:
-      NIFI_WEB_HTTP_HOST: nifi-1
-      NIFI_WEB_HTTP_PORT: 8443
+      NIFI_WEB_HTTPS_HOST: nifi-1
+      NIFI_WEB_HTTPS_PORT: 8443
       NIFI_CLUSTER_IS_NODE: "false"
       NIFI_SENSITIVE_PROPS_KEY: nifidemosecretkey
       SINGLE_USER_CREDENTIALS_USERNAME: ${SINGLE_USER_CREDENTIALS_USERNAME:-nifi}
@@ -240,8 +240,8 @@ services:
     ports:
       - "8444:8443"
     environment:
-      NIFI_WEB_HTTP_HOST: nifi-2
-      NIFI_WEB_HTTP_PORT: 8443
+      NIFI_WEB_HTTPS_HOST: nifi-2
+      NIFI_WEB_HTTPS_PORT: 8443
       NIFI_CLUSTER_IS_NODE: "true"
       NIFI_CLUSTER_NODE_PROTOCOL_PORT: 9998
       NIFI_CLUSTER_LOAD_BALANCE_PORT: 6342
@@ -280,8 +280,8 @@ services:
     ports:
       - "8445:8443"
     environment:
-      NIFI_WEB_HTTP_HOST: nifi-3
-      NIFI_WEB_HTTP_PORT: 8443
+      NIFI_WEB_HTTPS_HOST: nifi-3
+      NIFI_WEB_HTTPS_PORT: 8443
       NIFI_CLUSTER_IS_NODE: "true"
       NIFI_CLUSTER_NODE_PROTOCOL_PORT: 9998
       NIFI_CLUSTER_LOAD_BALANCE_PORT: 6342
