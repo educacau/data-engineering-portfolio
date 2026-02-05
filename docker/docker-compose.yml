@@ -334,10 +334,15 @@ services:
       NIFI_REGISTRY_DB_DRIVER_DIRECTORY: /opt/nifi-registry/nifi-registry-current/ext
       NIFI_REGISTRY_DB_USER: ${POSTGRES_USER:-iceberg}
       NIFI_REGISTRY_DB_PASS: ${POSTGRES_PASSWORD:-iceberg123}
-      NIFI_REGISTRY_FLOW_PROVIDER: database
+      # Git configuration for flow versioning
+      GIT_AUTHOR_NAME: NiFi Registry
+      GIT_AUTHOR_EMAIL: nifi-registry@localhost
+      GIT_COMMITTER_NAME: NiFi Registry
+      GIT_COMMITTER_EMAIL: nifi-registry@localhost
     volumes:
       - nifi_registry_database:/opt/nifi-registry/nifi-registry-current/database
-      - nifi_registry_flow_storage:/opt/nifi-registry/nifi-registry-current/flow_storage
+      - nifi_registry_flow_storage:/opt/nifi-registry/flow-storage
+      - ./nifi-registry/conf/providers.xml:/opt/nifi-registry/nifi-registry-current/conf/providers.xml:ro
     depends_on:
       postgres:
         condition: service_healthy
