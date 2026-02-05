@@ -38,7 +38,7 @@ This project follows the **Gitflow workflow** to maintain code quality and organ
 
 ### Workflow Steps
 
-#### For New Features:
+#### For New Features (Automated Workflow):
 
 ```bash
 # 1. Start from develop
@@ -52,15 +52,47 @@ git checkout -b feature/your-feature-name
 git add .
 git commit -m "feat: add your feature"
 
-# 4. Merge back to develop
+# 4. Push feature branch
+git push origin feature/your-feature-name
+
+# 5. Create PR automatically
+GITHUB_TOKEN=your_token ./scripts/create-pr.sh
+
+# 6. Merge PR on GitHub (via web interface)
+
+# 7. Sync and cleanup automatically
+./scripts/sync-after-merge.sh
+```
+
+**The script will automatically:**
+- ✅ Detect if PR was merged (checks if remote branch deleted)
+- ✅ Switch to develop
+- ✅ Pull latest changes
+- ✅ Delete local feature branch
+- ✅ Show updated status
+
+#### For New Features (Manual Workflow):
+
+```bash
+# 1. Start from develop
 git checkout develop
-git merge feature/your-feature-name --no-ff
+git pull origin develop
 
-# 5. Clean up
+# 2. Create feature branch
+git checkout -b feature/your-feature-name
+
+# 3. Make changes and commit
+git add .
+git commit -m "feat: add your feature"
+
+# 4. Push and create PR
+git push origin feature/your-feature-name
+# Create PR manually on GitHub
+
+# 5. After PR is merged, sync locally
+git checkout develop
+git pull origin develop
 git branch -d feature/your-feature-name
-
-# 6. Push to remote
-git push origin develop
 ```
 
 #### For Bug Fixes:
@@ -78,15 +110,37 @@ git checkout -b hotfix/issue-name
 git add .
 git commit -m "hotfix: fix critical issue"
 
-# 3. Merge to both main AND develop
-git checkout main
-git merge hotfix/issue-name --no-ff
+# 3. Push and create PR
+git push origin hotfix/issue-name
+GITHUB_TOKEN=your_token ./scripts/create-pr.sh  # Auto-targets 'main'
+
+# 4. After PR merged to main, also merge to develop
 git checkout develop
 git merge hotfix/issue-name --no-ff
+git push origin develop
 
-# 4. Clean up
-git branch -d hotfix/issue-name
+# 5. Cleanup
+./scripts/sync-after-merge.sh hotfix/issue-name
 ```
+
+### Automation Scripts
+
+This repository includes helpful scripts to automate the Gitflow workflow:
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| **install-hooks.sh** | Install Git hooks to block direct commits | `./scripts/install-hooks.sh` |
+| **create-pr.sh** | Automatically create Pull Request | `GITHUB_TOKEN=token ./scripts/create-pr.sh` |
+| **sync-after-merge.sh** | Sync and cleanup after PR merge | `./scripts/sync-after-merge.sh` |
+| **setup-branch-protection.sh** | Setup GitHub branch protection | `GITHUB_TOKEN=token ./scripts/setup-branch-protection.sh` |
+| **adjust-branch-protection-solo.sh** | Adjust protection for solo repos | `GITHUB_TOKEN=token ./scripts/adjust-branch-protection-solo.sh` |
+
+**Benefits of using automation scripts:**
+- ⚡ Faster workflow
+- ✅ No manual PR creation needed
+- 🤖 Automatic detection of merged PRs
+- 🧹 Automatic cleanup after merge
+- 📋 Consistent process every time
 
 ### Installing Git Hooks
 
