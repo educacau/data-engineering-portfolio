@@ -137,7 +137,7 @@ validate_prerequisites() {
 
     # Check port availability
     log_info "Checking port availability..."
-    local ports=(8443 8088 8888 8080 9000 9001 9090 3000)
+    local ports=(8443 18080 8088 8888 8080 9000 9001 9090 3000)
     local ports_in_use=()
 
     for port in "${ports[@]}"; do
@@ -257,6 +257,7 @@ wait_for_health() {
 
     local services=(
         "https://localhost:8443/nifi/|NiFi"
+        "http://localhost:18080/nifi-registry|NiFi Registry"
         "http://localhost:8088/health|Superset"
         "http://localhost:8080/v1/info|Trino"
         "http://localhost:9000/minio/health/live|MinIO"
@@ -309,9 +310,12 @@ display_urls() {
 Access the following services:
 
 🔧 Data Ingestion:
-   Apache NiFi       http://localhost:8443/nifi
+   Apache NiFi       https://localhost:8443/nifi
                      Username: nifi
                      Password: changeme123
+
+   NiFi Registry     http://localhost:18080/nifi-registry
+                     (Flow version control)
 
 📊 Analytics:
    Apache Superset   http://localhost:8088
