@@ -18,6 +18,7 @@
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | NiFi UI | https://localhost:8443/nifi/ | admin / supersecret1 |
+| NiFi Registry | http://localhost:18080/nifi-registry/ | No auth |
 | Superset | http://localhost:8088/ | admin / admin |
 | Jupyter Lab | http://localhost:8888/ | Password: supersecret1 |
 | Trino UI | http://localhost:8080/ui/ | No auth |

@@ -61,6 +61,7 @@ cd data-engineering-portfolio
 | Service | URL | Credentials | Purpose |
 |---------|-----|-------------|---------|
 | **NiFi** | https://localhost:8443/nifi/ | `admin` / `supersecret1` | Visual data flows |
+| **NiFi Registry** | http://localhost:18080/nifi-registry/ | No auth | Flow versioning |
 | **Superset** | http://localhost:8088/ | `admin` / `admin` | BI dashboards |
 | **Trino UI** | http://localhost:8080/ui/ | No auth | Query monitoring |
 | **Jupyter Lab** | http://localhost:8888/ | Password: `supersecret1` | Ad-hoc analysis |
