@@ -315,7 +315,7 @@ services:
       - full
 
   nifi-registry:
-    image: apache/nifi-registry:2.0.0
+    image: apache/nifi-registry:2.7.2
     container_name: nifi-registry
     hostname: nifi-registry
     networks:
