@@ -1,0 +1,577 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Flow: Real-time Aggregation Pipeline
+  Description: Real-time windowed aggregations for business metrics
+  Author: Data Engineering Portfolio
+  Version: 1.0
+-->
+<template encoding-version="1.4">
+    <description>Pipeline for real-time aggregations with sliding windows for business KPIs</description>
+    <groupId>05-realtime-aggregation</groupId>
+    <name>Real-time Aggregation Pipeline</name>
+    <snippet>
+        <processGroups>
+            <id>root-pg</id>
+            <parentGroupId>root</parentGroupId>
+            <position>
+                <x>0.0</x>
+                <y>0.0</y>
+            </position>
+            <comment>Real-time aggregations with 5-minute sliding windows for business KPIs</comment>
+            <contents>
+                <!-- Processor 1: Consume from Kafka -->
+                <processors>
+                    <id>proc-consume-kafka</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>100.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.kafka.pubsub.ConsumeKafkaRecord_2_6</type>
+                    <name>Consume Orders Stream</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>bootstrap.servers</key>
+                                <value>kafka:9092</value>
+                            </entry>
+                            <entry>
+                                <key>topic</key>
+                                <value>orders-raw</value>
+                            </entry>
+                            <entry>
+                                <key>group.id</key>
+                                <value>nifi-realtime-aggregator</value>
+                            </entry>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>auto.offset.reset</key>
+                                <value>latest</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>parse.failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 2: Add Window Timestamp -->
+                <processors>
+                    <id>proc-add-window</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>400.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.UpdateRecord</type>
+                    <name>Add Window Timestamp</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>/window_start</key>
+                                <value>${now():toNumber():divide(300000):floor():multiply(300000):format('yyyy-MM-dd HH:mm:ss')}</value>
+                            </entry>
+                            <entry>
+                                <key>/window_end</key>
+                                <value>${now():toNumber():divide(300000):floor():plus(1):multiply(300000):format('yyyy-MM-dd HH:mm:ss')}</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 3: Aggregate by Window and Region -->
+                <processors>
+                    <id>proc-aggregate</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>700.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.PartitionRecord</type>
+                    <name>Partition by Window-Region</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>Partition Record Path</key>
+                                <value>/window_start,/region</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 4: Calculate Aggregations -->
+                <processors>
+                    <id>proc-calculate-metrics</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1000.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.QueryRecord</type>
+                    <name>Calculate KPIs</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>aggregated</key>
+                                <value>
+SELECT
+    window_start,
+    window_end,
+    region,
+    COUNT(*) as order_count,
+    SUM(total_amount) as total_revenue,
+    AVG(total_amount) as avg_order_value,
+    MIN(total_amount) as min_order_value,
+    MAX(total_amount) as max_order_value,
+    COUNT(DISTINCT customer_id) as unique_customers
+FROM FLOWFILE
+GROUP BY window_start, window_end, region
+                                </value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 5: Add Metadata -->
+                <processors>
+                    <id>proc-add-metadata</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1300.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.UpdateRecord</type>
+                    <name>Add Aggregation Metadata</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>/computed_at</key>
+                                <value>${now():format('yyyy-MM-dd HH:mm:ss')}</value>
+                            </entry>
+                            <entry>
+                                <key>/aggregation_type</key>
+                                <value>5min_sliding_window</value>
+                            </entry>
+                            <entry>
+                                <key>/pipeline_version</key>
+                                <value>v1.0</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 6: Publish to Kafka Aggregated Topic -->
+                <processors>
+                    <id>proc-publish-kafka</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1600.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_6</type>
+                    <name>Publish to Aggregated Topic</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>bootstrap.servers</key>
+                                <value>kafka:9092</value>
+                            </entry>
+                            <entry>
+                                <key>topic</key>
+                                <value>orders-aggregated-5min</value>
+                            </entry>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>message-key-field</key>
+                                <value>region</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 7: Write to Trino Materialized View -->
+                <processors>
+                    <id>proc-write-trino</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1600.0</x>
+                        <y>300.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.PutDatabaseRecord</type>
+                    <name>Write to Trino Aggregation Table</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Database Connection Pooling Service</key>
+                                <value>TrinoConnectionPool</value>
+                            </entry>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Statement Type</key>
+                                <value>INSERT</value>
+                            </entry>
+                            <entry>
+                                <key>Table Name</key>
+                                <value>lakehouse.realtime_kpis</value>
+                            </entry>
+                            <entry>
+                                <key>Translate Field Names</key>
+                                <value>true</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 8: Detect Anomalies -->
+                <processors>
+                    <id>proc-detect-anomalies</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1900.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.RouteOnAttribute</type>
+                    <name>Detect Revenue Anomalies</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Routing Strategy</key>
+                                <value>Route to Property name</value>
+                            </entry>
+                            <entry>
+                                <key>high_revenue</key>
+                                <value>${total_revenue:gt(50000)}</value>
+                            </entry>
+                            <entry>
+                                <key>low_revenue</key>
+                                <value>${total_revenue:lt(1000)}</value>
+                            </entry>
+                            <entry>
+                                <key>normal</key>
+                                <value>${total_revenue:ge(1000):and(${total_revenue:le(50000)})}</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>unmatched</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 9: Send Alert for High Revenue -->
+                <processors>
+                    <id>proc-alert-high</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>2200.0</x>
+                        <y>50.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.LogAttribute</type>
+                    <name>Alert: High Revenue Window</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Log Level</key>
+                                <value>warn</value>
+                            </entry>
+                            <entry>
+                                <key>Log Payload</key>
+                                <value>true</value>
+                            </entry>
+                            <entry>
+                                <key>Log prefix</key>
+                                <value>HIGH_REVENUE_ALERT:</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 10: Send Alert for Low Revenue -->
+                <processors>
+                    <id>proc-alert-low</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>2200.0</x>
+                        <y>150.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.LogAttribute</type>
+                    <name>Alert: Low Revenue Window</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Log Level</key>
+                                <value>warn</value>
+                            </entry>
+                            <entry>
+                                <key>Log Payload</key>
+                                <value>true</value>
+                            </entry>
+                            <entry>
+                                <key>Log prefix</key>
+                                <value>LOW_REVENUE_ALERT:</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Connections -->
+                <connections>
+                    <id>conn-1</id>
+                    <source>
+                        <id>proc-consume-kafka</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-add-window</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-2</id>
+                    <source>
+                        <id>proc-add-window</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-aggregate</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-3</id>
+                    <source>
+                        <id>proc-aggregate</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-calculate-metrics</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-4</id>
+                    <source>
+                        <id>proc-calculate-metrics</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-add-metadata</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>aggregated</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-5</id>
+                    <source>
+                        <id>proc-add-metadata</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-publish-kafka</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-6</id>
+                    <source>
+                        <id>proc-add-metadata</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-write-trino</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-7</id>
+                    <source>
+                        <id>proc-publish-kafka</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-detect-anomalies</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-8</id>
+                    <source>
+                        <id>proc-detect-anomalies</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-alert-high</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>high_revenue</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-9</id>
+                    <source>
+                        <id>proc-detect-anomalies</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-alert-low</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>low_revenue</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-10</id>
+                    <source>
+                        <id>proc-detect-anomalies</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-detect-anomalies</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>normal</element>
+                    </selectedRelationships>
+                    <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                    <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                </connections>
+            </contents>
+            <name>Real-time Aggregation Pipeline</name>
+        </processGroups>
+    </snippet>
+    <timestamp>2026-02-05T12:00:00Z</timestamp>
+</template>
