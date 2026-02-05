@@ -331,6 +331,7 @@ services:
       NIFI_REGISTRY_WEB_HTTP_PORT: 18080
       NIFI_REGISTRY_DB_URL: jdbc:postgresql://postgres:5432/nifi_registry
       NIFI_REGISTRY_DB_CLASS: org.postgresql.Driver
+      NIFI_REGISTRY_DB_DRIVER_DIRECTORY: /opt/nifi-registry/nifi-registry-current/ext
       NIFI_REGISTRY_DB_USER: ${POSTGRES_USER:-iceberg}
       NIFI_REGISTRY_DB_PASSWORD: ${POSTGRES_PASSWORD:-iceberg123}
       NIFI_REGISTRY_FLOW_PROVIDER: database
