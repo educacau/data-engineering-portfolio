@@ -17,16 +17,10 @@ RUN curl -L -o /opt/nifi-registry/nifi-registry-current/lib/postgresql-42.7.1.ja
     chown nifi:nifi /opt/nifi-registry/nifi-registry-current/lib/postgresql-42.7.1.jar && \
     chmod 644 /opt/nifi-registry/nifi-registry-current/lib/postgresql-42.7.1.jar
 
-# Create flow storage directory and initialize Git repository
+# Create flow storage directory
+# Git repository will be initialized automatically by NiFi Registry on first use
 RUN mkdir -p /opt/nifi-registry/flow-storage && \
-    chown -R nifi:nifi /opt/nifi-registry/flow-storage && \
-    cd /opt/nifi-registry/flow-storage && \
-    git init && \
-    git config user.name "NiFi Registry" && \
-    git config user.email "nifi-registry@localhost" && \
-    echo "# NiFi Registry Flow Storage" > README.md && \
-    git add README.md && \
-    git commit -m "Initial commit"
+    chown -R nifi:nifi /opt/nifi-registry/flow-storage
 
 # Switch back to nifi user
 USER nifi
