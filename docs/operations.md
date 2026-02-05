@@ -17,7 +17,7 @@
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| NiFi UI | https://localhost:8443/nifi/ | nifi / changeme123 |
+| NiFi UI | https://localhost:8443/nifi/ | admin / supersecret1 |
 | Superset | http://localhost:8088/ | admin / admin |
 | Jupyter Lab | http://localhost:8888/ | Password: supersecret1 |
 | Trino UI | http://localhost:8080/ui/ | No auth |

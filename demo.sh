@@ -256,7 +256,7 @@ wait_for_health() {
     log_info "Waiting for services to become healthy (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
 
     local services=(
-        "https://localhost:8443/nifi-api/system-diagnostics|NiFi"
+        "https://localhost:8443/nifi/|NiFi"
         "http://localhost:8088/health|Superset"
         "http://localhost:8080/v1/info|Trino"
         "http://localhost:9000/minio/health/live|MinIO"
