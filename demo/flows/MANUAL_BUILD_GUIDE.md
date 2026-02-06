@@ -94,7 +94,7 @@ Dynamic Properties:
 
 #### 6. Publish to Kafka
 ```
-Type: org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_6
+Type: org.apache.nifi.processors.kafka.pubsub.PublishKafka
 Name: Publish to Kafka
 Position: (1100, 100)
 
@@ -105,7 +105,7 @@ Properties:
   - Record Writer: JsonRecordSetWriter
   - Message Key Field: order_id
   - Compression Type: snappy
-  - Acknowledgment: all
+  - Delivery Guarantee: DELIVERY_REPLICATED (replaces Acknowledgment: all)
 ```
 
 #### 7. Log Invalid Records

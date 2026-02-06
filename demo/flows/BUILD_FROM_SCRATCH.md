@@ -98,7 +98,7 @@ UpdateAttribute → LogAttribute (success)
 
 ### Processors:
 
-1. **ConsumeKafka_2_6**
+1. **ConsumeKafka**
    - Topic: orders-raw
    - Group ID: nifi-processor
    - Output Strategy: Use Content as Value
@@ -147,7 +147,7 @@ MergeContent → LogAttribute
 
 ### Processors:
 
-1. **ConsumeKafka_2_6**
+1. **ConsumeKafka**
    - Topic: orders-raw
 
 2. **ExtractText**

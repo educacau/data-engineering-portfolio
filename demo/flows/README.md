@@ -12,7 +12,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 **Arquitetura:**
 ```
 [CSV Files] → ListFile → FetchFile → ConvertRecord (CSV→JSON)
-           → ValidateRecord → UpdateAttribute → PublishKafkaRecord
+           → ValidateRecord → UpdateAttribute → PublishKafka
            ↳ [Invalid] → LogAttribute
 ```
 
@@ -35,7 +35,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 **Arquitetura:**
 ```
-[Kafka] → ConsumeKafkaRecord → LookupRecord (Customer Enrichment)
+[Kafka] → ConsumeKafka → LookupRecord (Customer Enrichment)
        → UpdateRecord (Metadata) → UpdateRecord (Derived Fields)
        → ConvertRecord (Parquet) → PutIceberg
        ↳ [Errors] → LogAttribute
@@ -116,7 +116,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 **Arquitetura:**
 ```
-[Kafka] → ConsumeKafkaRecord → UpdateRecord (Window Timestamps)
+[Kafka] → ConsumeKafka → UpdateRecord (Window Timestamps)
        → PartitionRecord (Window-Region) → QueryRecord (Aggregations)
        → UpdateRecord (Metadata) → PublishKafka + PutDatabaseRecord
        → RouteOnAttribute (Anomaly Detection)
