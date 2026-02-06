@@ -137,11 +137,26 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 ---
 
-## 🚀 Como Importar os Flows
+## 🚀 Como Importar os Flows (NiFi 2.7.2+)
 
 **📖 Guia Completo:** Consulte [`IMPORT_GUIDE.md`](./IMPORT_GUIDE.md) para instruções detalhadas, troubleshooting e workflows alternativos.
 
-### Via Interface do NiFi (Recomendado)
+**⚠️ IMPORTANTE:** NiFi 2.7.2+ não suporta mais upload direto de templates XML. Todos os flows devem ser importados via **NiFi Registry**.
+
+### Passo 1: Importar Flows para o Registry
+
+Execute o script de importação automatizado:
+
+```bash
+./scripts/import-flows.sh
+```
+
+O script irá:
+- ✅ Criar bucket `demo-flows` no Registry
+- ✅ Importar todos os 5 flows XML convertidos
+- ✅ Validar cada importação
+
+### Passo 2: Conectar NiFi ao Registry
 
 1. **Acesse o NiFi:**
    ```
@@ -150,21 +165,21 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
    Password: changeme123
    ```
 
-2. **Importar Template:**
-   - Menu (☰) → **Templates** → **Upload Template** (ícone de upload)
-   - Escolha um arquivo **XML** (ex: `01-ingest-orders-pipeline.xml`)
-   - Clique **Upload** → **OK**
+2. **Adicionar Registry Client:**
+   - Menu (☰) → **Controller Settings** → **Registry Clients** → **+**
+   - **Name:** Local Registry
+   - **URL:** `http://nifi-registry:18080`
+   - **Add** → **Apply**
 
-3. **Adicionar ao Canvas:**
-   - Arraste o ícone **Template** (ícone de página) para o canvas
-   - Selecione o template importado
-   - Clique **Add**
+### Passo 3: Importar Flows do Registry
 
-4. **Versionar no Registry:**
-   - Menu (☰) → **Controller Settings** → **Registry Clients**
-   - Adicione Registry: URL `http://nifi-registry:18080`
-   - Clique direito no Process Group → **Version → Start version control**
-   - Preencha bucket, flow name e comments → **Save**
+1. **Importar Flow:**
+   - Clique direito no canvas → **Version → Import from Registry**
+   - **Registry:** Local Registry
+   - **Bucket:** demo-flows
+   - **Flow:** Selecione um dos 5 flows → **Import**
+
+2. **Repetir para os outros 4 flows**
 
 ## ⚙️ Pré-requisitos
 
