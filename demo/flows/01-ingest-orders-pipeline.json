@@ -1,0 +1,377 @@
+{
+  "template": {
+    "@attributes": {
+      "encoding-version": "1.4"
+    },
+    "description": "Pipeline for ingesting order data from CSV files to Kafka with validation",
+    "groupId": "01-ingest-orders",
+    "name": "Ingest Orders Pipeline",
+    "snippet": {
+      "processGroups": {
+        "id": "root-pg",
+        "parentGroupId": "root",
+        "position": {
+          "x": "0.0",
+          "y": "0.0"
+        },
+        "comment": "Ingests order CSV files, validates data quality, and publishes to Kafka topic",
+        "contents": {
+          "processors": [
+            {
+              "id": "proc-list-files",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "100.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.ListFile",
+              "name": "List CSV Files",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Input Directory",
+                      "value": "/data/orders"
+                    },
+                    {
+                      "key": "File Filter",
+                      "value": "orders_.*\\.csv"
+                    },
+                    {
+                      "key": "Recurse Subdirectories",
+                      "value": "false"
+                    },
+                    {
+                      "key": "Minimum File Age",
+                      "value": "10 sec"
+                    }
+                  ]
+                },
+                "schedulingPeriod": "30 sec",
+                "schedulingStrategy": "TIMER_DRIVEN",
+                "executionNode": "ALL",
+                "runDurationMillis": "0"
+              }
+            },
+            {
+              "id": "proc-fetch-file",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "400.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.FetchFile",
+              "name": "Fetch CSV Content",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "File to Fetch",
+                      "value": "${absolute.path}/${filename}"
+                    },
+                    {
+                      "key": "Completion Strategy",
+                      "value": "Move File"
+                    },
+                    {
+                      "key": "Move Destination Directory",
+                      "value": "/data/orders/processed"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": [
+                    "not.found",
+                    "permission.denied"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-csv-to-json",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "700.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.ConvertRecord",
+              "name": "CSV to JSON",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "CSVReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-validate",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1000.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.ValidateRecord",
+              "name": "Validate Order Schema",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "Schema Access Strategy",
+                      "value": "schema-name"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-update-attributes",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1300.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
+              "name": "Add Ingestion Metadata",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "kafka.topic",
+                      "value": "orders-raw"
+                    },
+                    {
+                      "key": "ingestion.timestamp",
+                      "value": "${now():format('yyyy-MM-dd HH:mm:ss')}"
+                    },
+                    {
+                      "key": "source.system",
+                      "value": "ecommerce"
+                    },
+                    {
+                      "key": "data.version",
+                      "value": "v1"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-publish-kafka",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1600.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_6",
+              "name": "Publish to Kafka",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "bootstrap.servers",
+                      "value": "kafka:9092"
+                    },
+                    {
+                      "key": "topic",
+                      "value": "${kafka.topic}"
+                    },
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "message-key-field",
+                      "value": "order_id"
+                    },
+                    {
+                      "key": "compression.type",
+                      "value": "snappy"
+                    },
+                    {
+                      "key": "acks",
+                      "value": "all"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "success"
+                }
+              }
+            },
+            {
+              "id": "proc-log-invalid",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1000.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.standard.LogAttribute",
+              "name": "Log Invalid Records",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Log Level",
+                      "value": "warn"
+                    },
+                    {
+                      "key": "Log Payload",
+                      "value": "true"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "success"
+                }
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "conn-1",
+              "name": "list to fetch",
+              "source": {
+                "id": "proc-list-files",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-fetch-file",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-2",
+              "name": "fetch to convert",
+              "source": {
+                "id": "proc-fetch-file",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-csv-to-json",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-3",
+              "name": "convert to validate",
+              "source": {
+                "id": "proc-csv-to-json",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-validate",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-4",
+              "name": "valid to metadata",
+              "source": {
+                "id": "proc-validate",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-update-attributes",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "valid"
+              }
+            },
+            {
+              "id": "conn-5",
+              "name": "invalid to log",
+              "source": {
+                "id": "proc-validate",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-log-invalid",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "invalid"
+              }
+            },
+            {
+              "id": "conn-6",
+              "name": "metadata to kafka",
+              "source": {
+                "id": "proc-update-attributes",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-publish-kafka",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            }
+          ]
+        },
+        "name": "Ingest Orders Pipeline"
+      }
+    },
+    "timestamp": "2026-02-05T10:00:00Z"
+  },
+  "_metadata": {
+    "source": "01-ingest-orders-pipeline.xml",
+    "format": "nifi-registry-json",
+    "version": "1.0"
+  }
+}

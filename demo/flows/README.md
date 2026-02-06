@@ -5,7 +5,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ## 📦 Flows Disponíveis
 
 ### 1. Ingest Orders Pipeline
-**Arquivo:** `01-ingest-orders-pipeline.xml`
+**Arquivo:** `01-ingest-orders-pipeline.json`
 
 **Propósito:** Ingestão de pedidos de e-commerce de arquivos CSV para Kafka com validação.
 
@@ -29,7 +29,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 2. Stream Processing Pipeline
-**Arquivo:** `02-stream-processing-pipeline.xml`
+**Arquivo:** `02-stream-processing-pipeline.json`
 
 **Propósito:** Processamento em tempo real de pedidos do Kafka com enriquecimento e persistência no Iceberg.
 
@@ -54,7 +54,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 3. Data Quality Pipeline
-**Arquivo:** `03-data-quality-pipeline.xml`
+**Arquivo:** `03-data-quality-pipeline.json`
 
 **Propósito:** Validação contínua de qualidade de dados com múltiplas regras e detecção de anomalias.
 
@@ -83,7 +83,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 4. Backup to S3 Pipeline
-**Arquivo:** `04-backup-to-s3-pipeline.xml`
+**Arquivo:** `04-backup-to-s3-pipeline.json`
 
 **Propósito:** Backup diário automático da tabela Iceberg para storage S3 (MinIO) com retenção de 30 dias.
 
@@ -110,7 +110,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 5. Real-time Aggregation Pipeline
-**Arquivo:** `05-realtime-aggregation-pipeline.xml`
+**Arquivo:** `05-realtime-aggregation-pipeline.json`
 
 **Propósito:** Agregações em tempo real com janelas deslizantes de 5 minutos para KPIs de negócio.
 
@@ -151,7 +151,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 2. **Importar Template:**
    - Clique no menu hambúrguer (☰)
    - Selecione **Upload Template**
-   - Escolha um arquivo XML
+   - Escolha um arquivo JSON
    - Clique **Upload**
 
 3. **Adicionar ao Canvas:**
