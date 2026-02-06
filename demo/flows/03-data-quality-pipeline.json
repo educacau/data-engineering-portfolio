@@ -1,0 +1,518 @@
+{
+  "template": {
+    "@attributes": {
+      "encoding-version": "1.4"
+    },
+    "description": "Pipeline for data quality validation with Great Expectations integration",
+    "groupId": "03-data-quality",
+    "name": "Data Quality Pipeline",
+    "snippet": {
+      "processGroups": {
+        "id": "root-pg",
+        "parentGroupId": "root",
+        "position": {
+          "x": "0.0",
+          "y": "0.0"
+        },
+        "comment": "Validates data quality rules, detects anomalies, and generates quality reports",
+        "contents": {
+          "processors": [
+            {
+              "id": "proc-query-iceberg",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "100.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.ExecuteSQLRecord",
+              "name": "Query Recent Orders",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Database Connection Pooling Service",
+                      "value": "TrinoConnectionPool"
+                    },
+                    {
+                      "key": "SQL select query",
+                      "value": "SELECT * FROM lakehouse.orders_enriched WHERE processing_timestamp >= current_timestamp - interval '1' hour"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    }
+                  ]
+                },
+                "schedulingPeriod": "5 min",
+                "schedulingStrategy": "TIMER_DRIVEN",
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-check-nulls",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "400.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.QueryRecord",
+              "name": "Check Null Values",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "valid",
+                      "value": "SELECT * FROM FLOWFILE WHERE order_id IS NOT NULL AND customer_id IS NOT NULL AND total_amount IS NOT NULL"
+                    },
+                    {
+                      "key": "null_violations",
+                      "value": "SELECT * FROM FLOWFILE WHERE order_id IS NULL OR customer_id IS NULL OR total_amount IS NULL"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-check-ranges",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "700.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.QueryRecord",
+              "name": "Check Value Ranges",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "valid",
+                      "value": "SELECT * FROM FLOWFILE WHERE total_amount > 0 AND total_amount < 100000"
+                    },
+                    {
+                      "key": "range_violations",
+                      "value": "SELECT * FROM FLOWFILE WHERE total_amount <= 0 OR total_amount >= 100000"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-check-integrity",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1000.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.LookupRecord",
+              "name": "Check Customer Exists",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "Lookup Service",
+                      "value": "CustomerLookupService"
+                    },
+                    {
+                      "key": "Result RecordPath",
+                      "value": "/customer_exists"
+                    },
+                    {
+                      "key": "Routing Strategy",
+                      "value": "Route to 'success'"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-detect-anomalies",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1300.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.QueryRecord",
+              "name": "Detect Anomalies",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "normal",
+                      "value": "SELECT * FROM FLOWFILE WHERE customer_exists IS NOT NULL"
+                    },
+                    {
+                      "key": "anomalies",
+                      "value": "SELECT * FROM FLOWFILE WHERE customer_exists IS NULL"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-generate-report",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1600.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.JoltTransformRecord",
+              "name": "Generate Quality Report",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    },
+                    {
+                      "key": "Jolt Specification",
+                      "value": "{\n  \"operation\": \"shift\",\n  \"spec\": {\n    \"*\": {\n      \"order_id\": \"quality_checks[&1].order_id\",\n      \"total_amount\": \"quality_checks[&1].total_amount\",\n      \"customer_exists\": \"quality_checks[&1].referential_integrity_passed\"\n    }\n  }\n}"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-publish-metrics",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1900.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_6",
+              "name": "Publish to Quality Metrics Topic",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "bootstrap.servers",
+                      "value": "kafka:9092"
+                    },
+                    {
+                      "key": "topic",
+                      "value": "data-quality-metrics"
+                    },
+                    {
+                      "key": "Record Reader",
+                      "value": "JsonTreeReader"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "JsonRecordSetWriter"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "success"
+                }
+              }
+            },
+            {
+              "id": "proc-handle-null-violations",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "400.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.standard.PutFile",
+              "name": "Save Null Violations",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Directory",
+                      "value": "/data/quality-violations/null-checks"
+                    },
+                    {
+                      "key": "Conflict Resolution Strategy",
+                      "value": "replace"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": [
+                    "success",
+                    "failure"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-handle-range-violations",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "700.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.standard.PutFile",
+              "name": "Save Range Violations",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Directory",
+                      "value": "/data/quality-violations/range-checks"
+                    },
+                    {
+                      "key": "Conflict Resolution Strategy",
+                      "value": "replace"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": [
+                    "success",
+                    "failure"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-handle-anomalies",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1300.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.standard.PutFile",
+              "name": "Save Anomalies",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Directory",
+                      "value": "/data/quality-violations/anomalies"
+                    },
+                    {
+                      "key": "Conflict Resolution Strategy",
+                      "value": "replace"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": [
+                    "success",
+                    "failure"
+                  ]
+                }
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "conn-1",
+              "source": {
+                "id": "proc-query-iceberg",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-check-nulls",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-2",
+              "source": {
+                "id": "proc-check-nulls",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-check-ranges",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "valid"
+              }
+            },
+            {
+              "id": "conn-3",
+              "source": {
+                "id": "proc-check-nulls",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-handle-null-violations",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "null_violations"
+              }
+            },
+            {
+              "id": "conn-4",
+              "source": {
+                "id": "proc-check-ranges",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-check-integrity",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "valid"
+              }
+            },
+            {
+              "id": "conn-5",
+              "source": {
+                "id": "proc-check-ranges",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-handle-range-violations",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "range_violations"
+              }
+            },
+            {
+              "id": "conn-6",
+              "source": {
+                "id": "proc-check-integrity",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-detect-anomalies",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-7",
+              "source": {
+                "id": "proc-detect-anomalies",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-generate-report",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "normal"
+              }
+            },
+            {
+              "id": "conn-8",
+              "source": {
+                "id": "proc-detect-anomalies",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-handle-anomalies",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "anomalies"
+              }
+            },
+            {
+              "id": "conn-9",
+              "source": {
+                "id": "proc-generate-report",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-publish-metrics",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            }
+          ]
+        },
+        "name": "Data Quality Pipeline"
+      }
+    },
+    "timestamp": "2026-02-05T11:00:00Z"
+  },
+  "_metadata": {
+    "source": "03-data-quality-pipeline.xml",
+    "format": "nifi-registry-json",
+    "version": "1.0"
+  }
+}

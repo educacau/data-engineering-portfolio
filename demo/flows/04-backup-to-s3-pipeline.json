@@ -1,0 +1,513 @@
+{
+  "template": {
+    "@attributes": {
+      "encoding-version": "1.4"
+    },
+    "description": "Pipeline for daily backup of data lakehouse tables to S3 storage",
+    "groupId": "04-backup-to-s3",
+    "name": "Backup to S3 Pipeline",
+    "snippet": {
+      "processGroups": {
+        "id": "root-pg",
+        "parentGroupId": "root",
+        "position": {
+          "x": "0.0",
+          "y": "0.0"
+        },
+        "comment": "Daily backup of Iceberg tables to MinIO S3 with retention policy",
+        "contents": {
+          "processors": [
+            {
+              "id": "proc-trigger",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "100.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.GenerateFlowFile",
+              "name": "Daily Backup Trigger",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "File Size",
+                      "value": "0B"
+                    },
+                    {
+                      "key": "Batch Size",
+                      "value": "1"
+                    },
+                    {
+                      "key": "Unique FlowFiles",
+                      "value": "true"
+                    },
+                    {
+                      "key": "Data Format",
+                      "value": "Text"
+                    }
+                  ]
+                },
+                "schedulingPeriod": "0 2 * * *",
+                "schedulingStrategy": "CRON_DRIVEN"
+              }
+            },
+            {
+              "id": "proc-add-metadata",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "400.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
+              "name": "Add Backup Metadata",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "backup.timestamp",
+                      "value": "${now():format('yyyy-MM-dd_HHmmss')}"
+                    },
+                    {
+                      "key": "backup.date",
+                      "value": "${now():format('yyyy-MM-dd')}"
+                    },
+                    {
+                      "key": "backup.type",
+                      "value": "daily"
+                    },
+                    {
+                      "key": "s3.bucket",
+                      "value": "lakehouse-backups"
+                    },
+                    {
+                      "key": "s3.prefix",
+                      "value": "backups/${backup.date}/"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-query-orders",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "700.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.ExecuteSQLRecord",
+              "name": "Export Orders Table",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Database Connection Pooling Service",
+                      "value": "TrinoConnectionPool"
+                    },
+                    {
+                      "key": "SQL select query",
+                      "value": "SELECT * FROM lakehouse.orders_enriched"
+                    },
+                    {
+                      "key": "Record Writer",
+                      "value": "ParquetRecordSetWriter"
+                    },
+                    {
+                      "key": "Normalize Table/Column Names",
+                      "value": "true"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-compress",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1000.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.CompressContent",
+              "name": "Compress with Gzip",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Mode",
+                      "value": "compress"
+                    },
+                    {
+                      "key": "Compression Format",
+                      "value": "gzip"
+                    },
+                    {
+                      "key": "Compression Level",
+                      "value": "9"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-update-filename",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1300.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
+              "name": "Set S3 Object Key",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "filename",
+                      "value": "orders_enriched_${backup.timestamp}.parquet.gz"
+                    },
+                    {
+                      "key": "s3.object.key",
+                      "value": "${s3.prefix}${filename}"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "proc-put-s3",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1600.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.aws.s3.PutS3Object",
+              "name": "Upload to MinIO S3",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Bucket",
+                      "value": "${s3.bucket}"
+                    },
+                    {
+                      "key": "Object Key",
+                      "value": "${s3.object.key}"
+                    },
+                    {
+                      "key": "Endpoint Override URL",
+                      "value": "http://minio:9000"
+                    },
+                    {
+                      "key": "AWS Credentials Provider service",
+                      "value": "AWSCredentialsProviderControllerService"
+                    },
+                    {
+                      "key": "Storage Class",
+                      "value": "STANDARD"
+                    },
+                    {
+                      "key": "Server Side Encryption",
+                      "value": "None"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "failure"
+                }
+              }
+            },
+            {
+              "id": "proc-log-success",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "1900.0",
+                "y": "100.0"
+              },
+              "type": "org.apache.nifi.processors.standard.LogAttribute",
+              "name": "Log Backup Success",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Log Level",
+                      "value": "info"
+                    },
+                    {
+                      "key": "Log Payload",
+                      "value": "false"
+                    },
+                    {
+                      "key": "Attributes to Log",
+                      "value": "backup.timestamp,s3.bucket,s3.object.key,file.size"
+                    },
+                    {
+                      "key": "Log prefix",
+                      "value": "BACKUP_SUCCESS:"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "success"
+                }
+              }
+            },
+            {
+              "id": "proc-cleanup-trigger",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "100.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.standard.GenerateFlowFile",
+              "name": "Weekly Cleanup Trigger",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "File Size",
+                      "value": "0B"
+                    },
+                    {
+                      "key": "Batch Size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "schedulingPeriod": "0 3 * * 0",
+                "schedulingStrategy": "CRON_DRIVEN"
+              }
+            },
+            {
+              "id": "proc-list-old-backups",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "400.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.aws.s3.ListS3",
+              "name": "List Backups Older Than 30 Days",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Bucket",
+                      "value": "lakehouse-backups"
+                    },
+                    {
+                      "key": "Prefix",
+                      "value": "backups/"
+                    },
+                    {
+                      "key": "Endpoint Override URL",
+                      "value": "http://minio:9000"
+                    },
+                    {
+                      "key": "AWS Credentials Provider service",
+                      "value": "AWSCredentialsProviderControllerService"
+                    },
+                    {
+                      "key": "min-age",
+                      "value": "30 days"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": "success"
+                }
+              }
+            },
+            {
+              "id": "proc-delete-old-backups",
+              "parentGroupId": "root-pg",
+              "position": {
+                "x": "700.0",
+                "y": "400.0"
+              },
+              "type": "org.apache.nifi.processors.aws.s3.DeleteS3Object",
+              "name": "Delete Old Backups",
+              "state": "STOPPED",
+              "config": {
+                "properties": {
+                  "entry": [
+                    {
+                      "key": "Bucket",
+                      "value": "${s3.bucket}"
+                    },
+                    {
+                      "key": "Object Key",
+                      "value": "${filename}"
+                    },
+                    {
+                      "key": "Endpoint Override URL",
+                      "value": "http://minio:9000"
+                    },
+                    {
+                      "key": "AWS Credentials Provider service",
+                      "value": "AWSCredentialsProviderControllerService"
+                    }
+                  ]
+                },
+                "autoTerminatedRelationships": {
+                  "element": [
+                    "success",
+                    "failure"
+                  ]
+                }
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "conn-1",
+              "source": {
+                "id": "proc-trigger",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-add-metadata",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-2",
+              "source": {
+                "id": "proc-add-metadata",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-query-orders",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-3",
+              "source": {
+                "id": "proc-query-orders",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-compress",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-4",
+              "source": {
+                "id": "proc-compress",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-update-filename",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-5",
+              "source": {
+                "id": "proc-update-filename",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-put-s3",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-6",
+              "source": {
+                "id": "proc-put-s3",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-log-success",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-7",
+              "source": {
+                "id": "proc-cleanup-trigger",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-list-old-backups",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            },
+            {
+              "id": "conn-8",
+              "source": {
+                "id": "proc-list-old-backups",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "destination": {
+                "id": "proc-delete-old-backups",
+                "groupId": "root-pg",
+                "type": "PROCESSOR"
+              },
+              "selectedRelationships": {
+                "element": "success"
+              }
+            }
+          ]
+        },
+        "name": "Backup to S3 Pipeline"
+      }
+    },
+    "timestamp": "2026-02-05T11:30:00Z"
+  },
+  "_metadata": {
+    "source": "04-backup-to-s3-pipeline.xml",
+    "format": "nifi-registry-json",
+    "version": "1.0"
+  }
+}

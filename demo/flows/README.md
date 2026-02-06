@@ -12,7 +12,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 **Arquitetura:**
 ```
 [CSV Files] → ListFile → FetchFile → ConvertRecord (CSV→JSON)
-           → ValidateRecord → UpdateAttribute → PublishKafkaRecord
+           → ValidateRecord → UpdateAttribute → PublishKafka
            ↳ [Invalid] → LogAttribute
 ```
 
@@ -35,7 +35,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 **Arquitetura:**
 ```
-[Kafka] → ConsumeKafkaRecord → LookupRecord (Customer Enrichment)
+[Kafka] → ConsumeKafka → LookupRecord (Customer Enrichment)
        → UpdateRecord (Metadata) → UpdateRecord (Derived Fields)
        → ConvertRecord (Parquet) → PutIceberg
        ↳ [Errors] → LogAttribute
@@ -116,7 +116,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 **Arquitetura:**
 ```
-[Kafka] → ConsumeKafkaRecord → UpdateRecord (Window Timestamps)
+[Kafka] → ConsumeKafka → UpdateRecord (Window Timestamps)
        → PartitionRecord (Window-Region) → QueryRecord (Aggregations)
        → UpdateRecord (Metadata) → PublishKafka + PutDatabaseRecord
        → RouteOnAttribute (Anomaly Detection)
@@ -137,9 +137,29 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 ---
 
-## 🚀 Como Importar os Flows
+## 🚀 Como Criar os Flows (Abordagem Simplificada)
 
-### Via Interface do NiFi (Recomendado)
+**📖 Guia Recomendado:** [`BUILD_FROM_SCRATCH.md`](./BUILD_FROM_SCRATCH.md)
+
+**⚠️ MUDANÇA DE ABORDAGEM:**
+- ✅ **Novo:** Criar flows diretamente no NiFi Canvas (10 min cada)
+- ✅ **Versionar** automaticamente no Registry via "Start version control"
+- ❌ **Antigo:** Tentar importar XMLs (problemas de compatibilidade)
+
+### Passo 1: Importar Flows para o Registry
+
+Execute o script de importação automatizado:
+
+```bash
+./scripts/import-flows.sh
+```
+
+O script irá:
+- ✅ Criar bucket `demo-flows` no Registry
+- ✅ Importar todos os 5 flows XML convertidos
+- ✅ Validar cada importação
+
+### Passo 2: Conectar NiFi ao Registry
 
 1. **Acesse o NiFi:**
    ```
@@ -148,22 +168,21 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
    Password: changeme123
    ```
 
-2. **Importar Template:**
-   - Clique no menu hambúrguer (☰)
-   - Selecione **Upload Template**
-   - Escolha um arquivo XML
-   - Clique **Upload**
+2. **Adicionar Registry Client:**
+   - Menu (☰) → **Controller Settings** → **Registry Clients** → **+**
+   - **Name:** Local Registry
+   - **URL:** `http://nifi-registry:18080`
+   - **Add** → **Apply**
 
-3. **Adicionar ao Canvas:**
-   - Arraste o ícone **Template** para o canvas
-   - Selecione o template importado
-   - Clique **Add**
+### Passo 3: Importar Flows do Registry
 
-4. **Versionar no Registry:**
-   - Clique direito no Process Group
-   - **Version → Start version control**
-   - Selecione bucket e adicione nome
-   - Clique **Save**
+1. **Importar Flow:**
+   - Clique direito no canvas → **Version → Import from Registry**
+   - **Registry:** Local Registry
+   - **Bucket:** demo-flows
+   - **Flow:** Selecione um dos 5 flows → **Import**
+
+2. **Repetir para os outros 4 flows**
 
 ## ⚙️ Pré-requisitos
 

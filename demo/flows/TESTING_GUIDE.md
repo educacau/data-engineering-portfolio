@@ -136,7 +136,7 @@ docker exec kafka kafka-topics --list --bootstrap-server localhost:9092 | grep o
 #    - FetchFile: deve ter lido o arquivo (In: 1, Out: 1)
 #    - ConvertRecord: deve ter convertido (In: 1, Out: 1)
 #    - ValidateRecord: deve ter validado (Valid: 1)
-#    - PublishKafkaRecord: deve ter publicado (Success: 1)
+#    - PublishKafka: deve ter publicado (Success: 1)
 
 # 4. Verificar arquivo movido
 ls -la demo/data/orders/processed/
@@ -312,7 +312,7 @@ EOF
 #    Clique direito no Process Group → Start
 
 # 4. Monitorar processamento:
-#    - ConsumeKafkaRecord: deve consumir mensagens (Out > 0)
+#    - ConsumeKafka: deve consumir mensagens (Out > 0)
 #    - LookupRecord: deve enriquecer (Success > 0)
 #    - PutIceberg: deve persistir (Success > 0)
 ```
