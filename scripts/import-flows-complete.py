@@ -70,11 +70,20 @@ def extract_processors(contents_elem, group_id: str) -> List[Dict[str, Any]]:
 
         # Extract bundle info from type
         type_str = proc_type.text if proc_type is not None else ""
-        bundle_info = {
-            "group": "org.apache.nifi",
-            "artifact": "nifi-standard-nar",
-            "version": "1.25.0"
-        }
+
+        # Determine bundle based on processor type
+        if "kafka" in type_str.lower():
+            bundle_info = {
+                "group": "org.apache.nifi",
+                "artifact": "nifi-kafka-2-6-nar",
+                "version": "2.7.2"
+            }
+        else:
+            bundle_info = {
+                "group": "org.apache.nifi",
+                "artifact": "nifi-standard-nar",
+                "version": "2.7.2"
+            }
 
         # Parse properties
         properties = parse_properties(config)
