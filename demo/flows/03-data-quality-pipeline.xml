@@ -112,11 +112,11 @@
                             </entry>
                             <entry>
                                 <key>valid</key>
-                                <value>SELECT * FROM FLOWFILE WHERE total_amount > 0 AND total_amount < 100000</value>
+                                <value>SELECT * FROM FLOWFILE WHERE total_amount &gt; 0 AND total_amount &lt; 100000</value>
                             </entry>
                             <entry>
                                 <key>range_violations</key>
-                                <value>SELECT * FROM FLOWFILE WHERE total_amount <= 0 OR total_amount >= 100000</value>
+                                <value>SELECT * FROM FLOWFILE WHERE total_amount &lt;= 0 OR total_amount &gt;= 100000</value>
                             </entry>
                         </properties>
                         <autoTerminatedRelationships>
@@ -225,9 +225,9 @@
   "operation": "shift",
   "spec": {
     "*": {
-      "order_id": "quality_checks[&1].order_id",
-      "total_amount": "quality_checks[&1].total_amount",
-      "customer_exists": "quality_checks[&1].referential_integrity_passed"
+      "order_id": "quality_checks[&amp;1].order_id",
+      "total_amount": "quality_checks[&amp;1].total_amount",
+      "customer_exists": "quality_checks[&amp;1].referential_integrity_passed"
     }
   }
 }</value>
