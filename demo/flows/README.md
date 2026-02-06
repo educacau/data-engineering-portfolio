@@ -137,11 +137,14 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 ---
 
-## 🚀 Como Importar os Flows (NiFi 2.7.2+)
+## 🚀 Como Criar os Flows (Abordagem Simplificada)
 
-**📖 Guia Completo:** Consulte [`IMPORT_GUIDE.md`](./IMPORT_GUIDE.md) para instruções detalhadas, troubleshooting e workflows alternativos.
+**📖 Guia Recomendado:** [`BUILD_FROM_SCRATCH.md`](./BUILD_FROM_SCRATCH.md)
 
-**⚠️ IMPORTANTE:** NiFi 2.7.2+ não suporta mais upload direto de templates XML. Todos os flows devem ser importados via **NiFi Registry**.
+**⚠️ MUDANÇA DE ABORDAGEM:**
+- ✅ **Novo:** Criar flows diretamente no NiFi Canvas (10 min cada)
+- ✅ **Versionar** automaticamente no Registry via "Start version control"
+- ❌ **Antigo:** Tentar importar XMLs (problemas de compatibilidade)
 
 ### Passo 1: Importar Flows para o Registry
 
