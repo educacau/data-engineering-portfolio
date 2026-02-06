@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Flow: Ingest Orders Pipeline
+  Description: Reads order CSV files, validates schema, and publishes to Kafka
+  Author: Data Engineering Portfolio
+  Version: 1.0
+-->
+<template encoding-version="1.4">
+    <description>Pipeline for ingesting order data from CSV files to Kafka with validation</description>
+    <groupId>01-ingest-orders</groupId>
+    <name>Ingest Orders Pipeline</name>
+    <snippet>
+        <processGroups>
+            <id>root-pg</id>
+            <parentGroupId>root</parentGroupId>
+            <position>
+                <x>0.0</x>
+                <y>0.0</y>
+            </position>
+            <comment>Ingests order CSV files, validates data quality, and publishes to Kafka topic</comment>
+            <contents>
+                <!-- Processor 1: List Files from demo data directory -->
+                <processors>
+                    <id>proc-list-files</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>100.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.ListFile</type>
+                    <name>List CSV Files</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Input Directory</key>
+                                <value>/data/orders</value>
+                            </entry>
+                            <entry>
+                                <key>File Filter</key>
+                                <value>orders_.*\.csv</value>
+                            </entry>
+                            <entry>
+                                <key>Recurse Subdirectories</key>
+                                <value>false</value>
+                            </entry>
+                            <entry>
+                                <key>Minimum File Age</key>
+                                <value>10 sec</value>
+                            </entry>
+                        </properties>
+                        <schedulingPeriod>30 sec</schedulingPeriod>
+                        <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+                        <executionNode>ALL</executionNode>
+                        <runDurationMillis>0</runDurationMillis>
+                    </config>
+                </processors>
+
+                <!-- Processor 2: Fetch File Content -->
+                <processors>
+                    <id>proc-fetch-file</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>400.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.FetchFile</type>
+                    <name>Fetch CSV Content</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>File to Fetch</key>
+                                <value>${absolute.path}/${filename}</value>
+                            </entry>
+                            <entry>
+                                <key>Completion Strategy</key>
+                                <value>Move File</value>
+                            </entry>
+                            <entry>
+                                <key>Move Destination Directory</key>
+                                <value>/data/orders/processed</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>not.found</element>
+                            <element>permission.denied</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 3: Parse CSV to JSON -->
+                <processors>
+                    <id>proc-csv-to-json</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>700.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.ConvertRecord</type>
+                    <name>CSV to JSON</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>CSVReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 4: Validate Schema -->
+                <processors>
+                    <id>proc-validate</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1000.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.ValidateRecord</type>
+                    <name>Validate Order Schema</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>Schema Access Strategy</key>
+                                <value>schema-name</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 5: Add Metadata -->
+                <processors>
+                    <id>proc-update-attributes</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1300.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.attributes.UpdateAttribute</type>
+                    <name>Add Ingestion Metadata</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>kafka.topic</key>
+                                <value>orders-raw</value>
+                            </entry>
+                            <entry>
+                                <key>ingestion.timestamp</key>
+                                <value>${now():format('yyyy-MM-dd HH:mm:ss')}</value>
+                            </entry>
+                            <entry>
+                                <key>source.system</key>
+                                <value>ecommerce</value>
+                            </entry>
+                            <entry>
+                                <key>data.version</key>
+                                <value>v1</value>
+                            </entry>
+                        </properties>
+                    </config>
+                </processors>
+
+                <!-- Processor 6: Publish to Kafka -->
+                <processors>
+                    <id>proc-publish-kafka</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1600.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_6</type>
+                    <name>Publish to Kafka</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>bootstrap.servers</key>
+                                <value>kafka:9092</value>
+                            </entry>
+                            <entry>
+                                <key>topic</key>
+                                <value>${kafka.topic}</value>
+                            </entry>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>message-key-field</key>
+                                <value>order_id</value>
+                            </entry>
+                            <entry>
+                                <key>compression.type</key>
+                                <value>snappy</value>
+                            </entry>
+                            <entry>
+                                <key>acks</key>
+                                <value>all</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 7: Handle Invalid Records -->
+                <processors>
+                    <id>proc-log-invalid</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1000.0</x>
+                        <y>400.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.LogAttribute</type>
+                    <name>Log Invalid Records</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Log Level</key>
+                                <value>warn</value>
+                            </entry>
+                            <entry>
+                                <key>Log Payload</key>
+                                <value>true</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Connections -->
+                <connections>
+                    <id>conn-1</id>
+                    <name>list to fetch</name>
+                    <source>
+                        <id>proc-list-files</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-fetch-file</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-2</id>
+                    <name>fetch to convert</name>
+                    <source>
+                        <id>proc-fetch-file</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-csv-to-json</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-3</id>
+                    <name>convert to validate</name>
+                    <source>
+                        <id>proc-csv-to-json</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-validate</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-4</id>
+                    <name>valid to metadata</name>
+                    <source>
+                        <id>proc-validate</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-update-attributes</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>valid</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-5</id>
+                    <name>invalid to log</name>
+                    <source>
+                        <id>proc-validate</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-log-invalid</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>invalid</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-6</id>
+                    <name>metadata to kafka</name>
+                    <source>
+                        <id>proc-update-attributes</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-publish-kafka</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+            </contents>
+            <name>Ingest Orders Pipeline</name>
+        </processGroups>
+    </snippet>
+    <timestamp>2026-02-05T10:00:00Z</timestamp>
+</template>

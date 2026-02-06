@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Flow: Stream Processing Pipeline
+  Description: Consumes from Kafka, enriches data, and writes to Iceberg table
+  Author: Data Engineering Portfolio
+  Version: 1.0
+-->
+<template encoding-version="1.4">
+    <description>Pipeline for consuming Kafka events, enriching with customer data, and writing to Iceberg</description>
+    <groupId>02-stream-processing</groupId>
+    <name>Stream Processing Pipeline</name>
+    <snippet>
+        <processGroups>
+            <id>root-pg</id>
+            <parentGroupId>root</parentGroupId>
+            <position>
+                <x>0.0</x>
+                <y>0.0</y>
+            </position>
+            <comment>Consumes orders from Kafka, enriches with customer data, and persists to Iceberg lakehouse</comment>
+            <contents>
+                <!-- Processor 1: Consume from Kafka -->
+                <processors>
+                    <id>proc-consume-kafka</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>100.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.kafka.pubsub.ConsumeKafkaRecord_2_6</type>
+                    <name>Consume Orders from Kafka</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>bootstrap.servers</key>
+                                <value>kafka:9092</value>
+                            </entry>
+                            <entry>
+                                <key>topic</key>
+                                <value>orders-raw</value>
+                            </entry>
+                            <entry>
+                                <key>topic_type</key>
+                                <value>names</value>
+                            </entry>
+                            <entry>
+                                <key>group.id</key>
+                                <value>nifi-stream-processor</value>
+                            </entry>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>auto.offset.reset</key>
+                                <value>earliest</value>
+                            </entry>
+                            <entry>
+                                <key>max.poll.records</key>
+                                <value>500</value>
+                            </entry>
+                            <entry>
+                                <key>Communications Timeout</key>
+                                <value>60 sec</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>parse.failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 2: Enrich with Customer Data -->
+                <processors>
+                    <id>proc-enrich-customer</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>400.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.LookupRecord</type>
+                    <name>Enrich Customer Data</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>Lookup Service</key>
+                                <value>CustomerLookupService</value>
+                            </entry>
+                            <entry>
+                                <key>Result RecordPath</key>
+                                <value>/customer</value>
+                            </entry>
+                            <entry>
+                                <key>Routing Strategy</key>
+                                <value>Route to 'success'</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 3: Add Processing Metadata -->
+                <processors>
+                    <id>proc-add-metadata</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>700.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.UpdateRecord</type>
+                    <name>Add Processing Metadata</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>/processing_timestamp</key>
+                                <value>${now():format('yyyy-MM-dd HH:mm:ss')}</value>
+                            </entry>
+                            <entry>
+                                <key>/pipeline_version</key>
+                                <value>v1.0</value>
+                            </entry>
+                            <entry>
+                                <key>/processed_by</key>
+                                <value>nifi-stream-processor</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 4: Calculate Derived Fields -->
+                <processors>
+                    <id>proc-calculate-fields</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1000.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.UpdateRecord</type>
+                    <name>Calculate Derived Fields</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>JsonRecordSetWriter</value>
+                            </entry>
+                            <entry>
+                                <key>/order_date_year</key>
+                                <value>${field.value:toDate('yyyy-MM-dd'):format('yyyy')}</value>
+                            </entry>
+                            <entry>
+                                <key>/order_date_month</key>
+                                <value>${field.value:toDate('yyyy-MM-dd'):format('MM')}</value>
+                            </entry>
+                            <entry>
+                                <key>/is_high_value</key>
+                                <value>${field.value:gt(1000)}</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 5: Convert to Parquet -->
+                <processors>
+                    <id>proc-to-parquet</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1300.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.ConvertRecord</type>
+                    <name>Convert to Parquet</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>JsonTreeReader</value>
+                            </entry>
+                            <entry>
+                                <key>Record Writer</key>
+                                <value>ParquetRecordSetWriter</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>failure</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 6: Write to Iceberg Table -->
+                <processors>
+                    <id>proc-write-iceberg</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1600.0</x>
+                        <y>100.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.iceberg.PutIceberg</type>
+                    <name>Write to Iceberg</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Catalog Service</key>
+                                <value>IcebergCatalogService</value>
+                            </entry>
+                            <entry>
+                                <key>Catalog Namespace</key>
+                                <value>lakehouse</value>
+                            </entry>
+                            <entry>
+                                <key>Table Name</key>
+                                <value>orders_enriched</value>
+                            </entry>
+                            <entry>
+                                <key>Record Reader</key>
+                                <value>ParquetReader</value>
+                            </entry>
+                            <entry>
+                                <key>Write Mode</key>
+                                <value>APPEND</value>
+                            </entry>
+                            <entry>
+                                <key>File Format</key>
+                                <value>PARQUET</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Processor 7: Handle Errors -->
+                <processors>
+                    <id>proc-log-errors</id>
+                    <parentGroupId>root-pg</parentGroupId>
+                    <position>
+                        <x>1300.0</x>
+                        <y>400.0</y>
+                    </position>
+                    <type>org.apache.nifi.processors.standard.LogAttribute</type>
+                    <name>Log Processing Errors</name>
+                    <state>STOPPED</state>
+                    <config>
+                        <properties>
+                            <entry>
+                                <key>Log Level</key>
+                                <value>error</value>
+                            </entry>
+                            <entry>
+                                <key>Log Payload</key>
+                                <value>true</value>
+                            </entry>
+                            <entry>
+                                <key>Attributes to Log</key>
+                                <value>kafka.topic,kafka.partition,kafka.offset</value>
+                            </entry>
+                        </properties>
+                        <autoTerminatedRelationships>
+                            <element>success</element>
+                        </autoTerminatedRelationships>
+                    </config>
+                </processors>
+
+                <!-- Connections -->
+                <connections>
+                    <id>conn-1</id>
+                    <name>kafka to enrich</name>
+                    <source>
+                        <id>proc-consume-kafka</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-enrich-customer</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-2</id>
+                    <name>enrich to metadata</name>
+                    <source>
+                        <id>proc-enrich-customer</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-add-metadata</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-3</id>
+                    <name>metadata to calculate</name>
+                    <source>
+                        <id>proc-add-metadata</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-calculate-fields</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-4</id>
+                    <name>calculate to parquet</name>
+                    <source>
+                        <id>proc-calculate-fields</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-to-parquet</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-5</id>
+                    <name>parquet to iceberg</name>
+                    <source>
+                        <id>proc-to-parquet</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-write-iceberg</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>success</element>
+                    </selectedRelationships>
+                </connections>
+
+                <connections>
+                    <id>conn-6</id>
+                    <name>errors to log</name>
+                    <source>
+                        <id>proc-write-iceberg</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </source>
+                    <destination>
+                        <id>proc-log-errors</id>
+                        <groupId>root-pg</groupId>
+                        <type>PROCESSOR</type>
+                    </destination>
+                    <selectedRelationships>
+                        <element>failure</element>
+                    </selectedRelationships>
+                </connections>
+            </contents>
+            <name>Stream Processing Pipeline</name>
+        </processGroups>
+    </snippet>
+    <timestamp>2026-02-05T10:30:00Z</timestamp>
+</template>

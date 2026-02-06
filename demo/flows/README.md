@@ -5,7 +5,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ## 📦 Flows Disponíveis
 
 ### 1. Ingest Orders Pipeline
-**Arquivo:** `01-ingest-orders-pipeline.json`
+**Arquivo:** `01-ingest-orders-pipeline.xml`
 
 **Propósito:** Ingestão de pedidos de e-commerce de arquivos CSV para Kafka com validação.
 
@@ -29,7 +29,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 2. Stream Processing Pipeline
-**Arquivo:** `02-stream-processing-pipeline.json`
+**Arquivo:** `02-stream-processing-pipeline.xml`
 
 **Propósito:** Processamento em tempo real de pedidos do Kafka com enriquecimento e persistência no Iceberg.
 
@@ -54,7 +54,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 3. Data Quality Pipeline
-**Arquivo:** `03-data-quality-pipeline.json`
+**Arquivo:** `03-data-quality-pipeline.xml`
 
 **Propósito:** Validação contínua de qualidade de dados com múltiplas regras e detecção de anomalias.
 
@@ -83,7 +83,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 4. Backup to S3 Pipeline
-**Arquivo:** `04-backup-to-s3-pipeline.json`
+**Arquivo:** `04-backup-to-s3-pipeline.xml`
 
 **Propósito:** Backup diário automático da tabela Iceberg para storage S3 (MinIO) com retenção de 30 dias.
 
@@ -110,7 +110,7 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 ---
 
 ### 5. Real-time Aggregation Pipeline
-**Arquivo:** `05-realtime-aggregation-pipeline.json`
+**Arquivo:** `05-realtime-aggregation-pipeline.xml`
 
 **Propósito:** Agregações em tempo real com janelas deslizantes de 5 minutos para KPIs de negócio.
 
@@ -139,6 +139,8 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
 
 ## 🚀 Como Importar os Flows
 
+**📖 Guia Completo:** Consulte [`IMPORT_GUIDE.md`](./IMPORT_GUIDE.md) para instruções detalhadas, troubleshooting e workflows alternativos.
+
 ### Via Interface do NiFi (Recomendado)
 
 1. **Acesse o NiFi:**
@@ -149,21 +151,20 @@ Conjunto completo de **5 flows de Data Engineering** prontos para importação n
    ```
 
 2. **Importar Template:**
-   - Clique no menu hambúrguer (☰)
-   - Selecione **Upload Template**
-   - Escolha um arquivo JSON
-   - Clique **Upload**
+   - Menu (☰) → **Templates** → **Upload Template** (ícone de upload)
+   - Escolha um arquivo **XML** (ex: `01-ingest-orders-pipeline.xml`)
+   - Clique **Upload** → **OK**
 
 3. **Adicionar ao Canvas:**
-   - Arraste o ícone **Template** para o canvas
+   - Arraste o ícone **Template** (ícone de página) para o canvas
    - Selecione o template importado
    - Clique **Add**
 
 4. **Versionar no Registry:**
-   - Clique direito no Process Group
-   - **Version → Start version control**
-   - Selecione bucket e adicione nome
-   - Clique **Save**
+   - Menu (☰) → **Controller Settings** → **Registry Clients**
+   - Adicione Registry: URL `http://nifi-registry:18080`
+   - Clique direito no Process Group → **Version → Start version control**
+   - Preencha bucket, flow name e comments → **Save**
 
 ## ⚙️ Pré-requisitos
 
