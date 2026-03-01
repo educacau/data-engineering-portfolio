@@ -6,7 +6,7 @@ pytest-cov==4.1.0
 pytest-timeout==2.2.0
 
 # Docker integration
-docker==7.0.0
+docker==7.1.0
 
 # Database clients
 trino==0.328.0
