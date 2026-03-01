@@ -19,7 +19,7 @@ great-expectations==0.18.8
 requests==2.32.4
 
 # Data manipulation
-pandas==2.2.0
+pandas==3.0.1
 pyarrow==15.0.0
 
 # Configuration
