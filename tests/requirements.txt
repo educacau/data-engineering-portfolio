@@ -16,7 +16,7 @@ psycopg2-binary==2.9.9
 great-expectations==0.18.8
 
 # HTTP testing
-requests==2.32.4
+requests==2.33.0
 
 # Data manipulation
 pandas==2.2.0
